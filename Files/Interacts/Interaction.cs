@@ -829,7 +829,7 @@ namespace Files.Interacts
                 {
                     await DialogDisplayHelper.ShowDialog("RenameError.ItemDeleted.Title".GetLocalized(), "RenameError.ItemDeleted.Text".GetLocalized());
                 }
-                else
+                else if (!renamed)
                 {
                     var ItemAlreadyExistsDialog = new ContentDialog()
                     {
