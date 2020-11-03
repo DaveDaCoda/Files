@@ -329,21 +329,21 @@ namespace Files.Interacts
         public async void OpenFileLocation_Click(object sender, RoutedEventArgs e)
         {
             var item = AssociatedInstance.ContentPage.SelectedItem as ShortcutItem;
-            try
+            var folderPath = Path.GetDirectoryName(item.TargetPath);
+            // Check if destination path exists
+            var destFolder = await AssociatedInstance.FilesystemViewModel.GetFolderWithPathFromPathAsync(folderPath);
+            if (destFolder)
             {
-                var folderPath = Path.GetDirectoryName(item.TargetPath);
-                // Check if destination path exists
-                var destFolder = await AssociatedInstance.FilesystemViewModel.GetFolderWithPathFromPathAsync(folderPath);
-                AssociatedInstance.ContentFrame.Navigate(AppSettings.GetLayoutType(), new NavigationArguments() { NavPathParam = folderPath, AssociatedTabInstance = AssociatedInstance });
+                AssociatedInstance.ContentFrame.Navigate(AppSettings.GetLayoutType(), folderPath);
             }
-            catch (FileNotFoundException)
+            else if (destFolder == FilesystemErrorCode.ERROR_NOTFOUND)
             {
                 await DialogDisplayHelper.ShowDialog("FileNotFoundDialog/Title".GetLocalized(), "FileNotFoundDialog/Text".GetLocalized());
             }
-            catch (Exception ex)
+            else
             {
                 await DialogDisplayHelper.ShowDialog("InvalidItemDialogTitle".GetLocalized(),
-                    string.Format("InvalidItemDialogContent".GetLocalized()), Environment.NewLine, ex.Message);
+                    string.Format("InvalidItemDialogContent".GetLocalized()), Environment.NewLine, destFolder.ErrorCode.ToString());
             }
         }
 
@@ -1166,9 +1166,6 @@ namespace Files.Interacts
                 currentPath = AssociatedInstance.FilesystemViewModel.WorkingDirectory;
             }
 
-            StorageFolderWithPath folderWithPath = await AssociatedInstance.FilesystemViewModel.GetFolderWithPathFromPathAsync(currentPath);
-            StorageFolder folderToCreateItem = folderWithPath.Folder;
-
             // Show rename dialog
             RenameDialog renameDialog = new RenameDialog();
             var renameResult = await renameDialog.ShowAsync();
@@ -1179,27 +1176,29 @@ namespace Files.Interacts
 
             // Create file based on dialog result
             string userInput = renameDialog.storedRenameInput;
-            try
+            var folderRes = await AssociatedInstance.FilesystemViewModel.GetFolderFromPathAsync(currentPath);
+            FilesystemResult created = folderRes;
+            if (folderRes)
             {
                 switch (itemType)
                 {
                     case AddItemType.Folder:
                         userInput = !string.IsNullOrWhiteSpace(userInput) ? userInput : "NewFolder".GetLocalized();
-                        await folderToCreateItem.CreateFolderAsync(userInput, CreationCollisionOption.GenerateUniqueName);
+                        created = await folderRes.Result.CreateFolderAsync(userInput, CreationCollisionOption.GenerateUniqueName).AsTask().Wrap();
                         break;
 
                     case AddItemType.TextDocument:
                         userInput = !string.IsNullOrWhiteSpace(userInput) ? userInput : "NewTextDocument".GetLocalized();
-                        await folderToCreateItem.CreateFileAsync(userInput + ".txt", CreationCollisionOption.GenerateUniqueName);
+                        created = await folderRes.Result.CreateFileAsync(userInput + ".txt", CreationCollisionOption.GenerateUniqueName).AsTask().Wrap();
                         break;
 
                     case AddItemType.BitmapImage:
                         userInput = !string.IsNullOrWhiteSpace(userInput) ? userInput : "NewBitmapImage".GetLocalized();
-                        await folderToCreateItem.CreateFileAsync(userInput + ".bmp", CreationCollisionOption.GenerateUniqueName);
+                        created = await folderRes.Result.CreateFileAsync(userInput + ".bmp", CreationCollisionOption.GenerateUniqueName).AsTask().Wrap();
                         break;
                 }
             }
-            catch (UnauthorizedAccessException)
+            if (created == FilesystemErrorCode.ERROR_UNAUTHORIZED)
             {
                 await DialogDisplayHelper.ShowDialog("AccessDeniedCreateDialog/Title".GetLocalized(), "AccessDeniedCreateDialog/Text".GetLocalized());
             }

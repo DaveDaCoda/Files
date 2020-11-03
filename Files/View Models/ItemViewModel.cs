@@ -75,6 +75,7 @@ namespace Files.Filesystem
 
         public async Task<FilesystemResult> SetWorkingDirectory(string value)
         {
+            var navigated = (FilesystemResult)true;
             if (string.IsNullOrWhiteSpace(value))
             {
                 return new FilesystemResult(FilesystemErrorCode.ERROR_NOTAFOLDER);
@@ -96,9 +97,17 @@ namespace Files.Filesystem
             if (Path.IsPathRooted(value))
             {
                 var res = await StorageFileExtensions.DangerousGetFolderWithPathFromPathAsync(value, _workingRoot, _currentStorageFolder).Wrap();
-                if (!res) return res;
-                _currentStorageFolder = res.Result;
-                _customPath = null;
+                if (res)
+                {
+                    _currentStorageFolder = res.Result;
+                    _customPath = null;
+                }
+                else
+                {
+                    _currentStorageFolder = null;
+                    _customPath = value;
+                }
+                navigated = res;
             }
 
             if (value == "Home")
@@ -111,7 +120,7 @@ namespace Files.Filesystem
             }
 
             NotifyPropertyChanged(nameof(WorkingDirectory));
-            return (FilesystemResult)true;
+            return navigated;
         }
 
         public async Task<FilesystemResult<StorageFolder>> GetFolderFromPathAsync(string value)
@@ -786,17 +795,21 @@ namespace Files.Filesystem
             // Flag to use FindFirstFileExFromApp or StorageFolder enumeration
             bool enumFromStorageFolder = false;
 
-            try
+            var res = await StorageFolder.GetFolderFromPathAsync(path).AsTask().Wrap();
+            if (res)
             {
-                _rootFolder = await StorageFolder.GetFolderFromPathAsync(path);
+                _rootFolder = res.Result;
             }
-            catch (UnauthorizedAccessException)
+            else if (res == FilesystemErrorCode.ERROR_UNAUTHORIZED)
             {
-                var consentDialogDisplay = new ConsentDialog();
-                await consentDialogDisplay.ShowAsync(ContentDialogPlacement.Popup);
+                // TODO: proper dialog
+                await DialogDisplayHelper.ShowDialog(
+                    "AccessDeniedDeleteDialog/Title".GetLocalized(),
+                    "SubDirectoryAccessDenied".GetLocalized());
+                IsLoadingItems = false;
                 return false;
             }
-            catch (FileNotFoundException)
+            else if (res == FilesystemErrorCode.ERROR_NOTFOUND)
             {
                 await DialogDisplayHelper.ShowDialog(
                     "FolderNotFoundDialog/Title".GetLocalized(),
@@ -804,7 +817,7 @@ namespace Files.Filesystem
                 IsLoadingItems = false;
                 return false;
             }
-            catch (Exception e)
+            else
             {
                 if (_workingRoot != null)
                 {
@@ -813,7 +826,7 @@ namespace Files.Filesystem
                 }
                 else
                 {
-                    await DialogDisplayHelper.ShowDialog("DriveUnpluggedDialog/Title".GetLocalized(), e.Message);
+                    await DialogDisplayHelper.ShowDialog("DriveUnpluggedDialog/Title".GetLocalized(), res.ErrorCode.ToString());
                     IsLoadingItems = false;
                     return false;
                 }
