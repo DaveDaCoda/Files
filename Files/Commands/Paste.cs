@@ -116,19 +116,12 @@ namespace Files.Commands
                             progress.Report(progressValue);
                         }
 
-                        try
+                        var res = await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(destinationPath);
+                        res = res ? await CloneDirectoryAsync((StorageFolder)item, res.Result, item.Name).Wrap() : res;
+                        if (res)
                         {
-                            ClonedDirectoryOutput pastedOutput = await CloneDirectoryAsync(
-                                (StorageFolder)item,
-                                await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(destinationPath),
-                                item.Name);
                             pastedSourceItems.Add(item);
-                            pastedItems.Add(pastedOutput.FolderOutput);
-                        }
-                        catch (FileNotFoundException)
-                        {
-                            // Folder was moved/deleted in the meantime
-                            continue;
+                            pastedItems.Add(res.Result);
                         }
                     }
                 }
@@ -141,15 +134,21 @@ namespace Files.Commands
                         progress.Report(progressValue);
                     }
 
-                    try
+                    var res = await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(destinationPath);
+                    if (res)
                     {
                         StorageFile clipboardFile = (StorageFile)item;
-                        StorageFile pastedFile = await clipboardFile.CopyAsync(
-                            await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(destinationPath),
-                            item.Name,
-                            NameCollisionOption.GenerateUniqueName);
-                        pastedSourceItems.Add(item);
-                        pastedItems.Add(pastedFile);
+                        var pasted = await clipboardFile.CopyAsync(res.Result, item.Name, NameCollisionOption.GenerateUniqueName).AsTask().Wrap();
+                        if (pasted)
+                        {
+                            pastedSourceItems.Add(item);
+                            pastedItems.Add(pasted.Result);
+                        }
+                    }
+
+                    try
+                    {
+
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -237,13 +236,7 @@ namespace Files.Commands
             packageView.ReportOperationCompleted(acceptedOperation);
         }
 
-        public class ClonedDirectoryOutput
-        {
-            public StorageFolder FolderOutput { get; set; }
-            // TODO: simplify/remove this class
-        }
-
-        public async static Task<ClonedDirectoryOutput> CloneDirectoryAsync(StorageFolder SourceFolder, StorageFolder DestinationFolder, string sourceRootName)
+        public async static Task<StorageFolder> CloneDirectoryAsync(StorageFolder SourceFolder, StorageFolder DestinationFolder, string sourceRootName)
         {
             var createdRoot = await DestinationFolder.CreateFolderAsync(sourceRootName, CreationCollisionOption.GenerateUniqueName);
             DestinationFolder = createdRoot;
@@ -258,10 +251,7 @@ namespace Files.Commands
                 await CloneDirectoryAsync(folderinSourceDir, DestinationFolder, folderinSourceDir.Name);
             }
 
-            return new ClonedDirectoryOutput()
-            {
-                FolderOutput = createdRoot,
-            };
+            return createdRoot;
         }
 
         public static long CalculateTotalItemsSize(IReadOnlyList<IStorageItem> itemsPasting)

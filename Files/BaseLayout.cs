@@ -241,7 +241,15 @@ namespace Files
             ParentShellPageInstance.NavigationToolbar.CanRefresh = true;
             IsItemSelected = false;
             ParentShellPageInstance.FilesystemViewModel.IsFolderEmptyTextDisplayed = false;
-            await ParentShellPageInstance.FilesystemViewModel.SetWorkingDirectory(parameters.NavPathParam);
+
+            var res = await App.CurrentInstance.FilesystemViewModel.SetWorkingDirectory(parameters);
+            if (!res)
+            {
+                // TODO: Show error dialog
+                await ParentShellPageInstance.FilesystemViewModel.SetWorkingDirectory("NewTab".GetLocalized());
+                ParentShellPageInstance.ContentFrame.Navigate(typeof(YourHome), "NewTab".GetLocalized(), new Windows.UI.Xaml.Media.Animation.SuppressNavigationTransitionInfo());
+                return;
+            }
 
             // pathRoot will be empty on recycle bin path
             var workingDir = ParentShellPageInstance.FilesystemViewModel.WorkingDirectory;
@@ -604,11 +612,19 @@ namespace Files
                 }
                 else if (item.PrimaryItemAttribute == StorageItemTypes.File)
                 {
-                    selectedStorageItems.Add(await ParentShellPageInstance.FilesystemViewModel.GetFileFromPathAsync(item.ItemPath));
+                    var res = await ParentShellPageInstance.FilesystemViewModel.GetFileFromPathAsync(item.ItemPath);
+                    if (res)
+                    {
+                        selectedStorageItems.Add(res.Result);
+                    }
                 }
                 else if (item.PrimaryItemAttribute == StorageItemTypes.Folder)
                 {
-                    selectedStorageItems.Add(await ParentShellPageInstance.FilesystemViewModel.GetFolderFromPathAsync(item.ItemPath));
+                    var res = await ParentShellPageInstance.FilesystemViewModel.GetFolderFromPathAsync(item.ItemPath);
+                    if (res)
+                    {
+                        selectedStorageItems.Add(res.Result);
+                    }
                 }
             }
 
