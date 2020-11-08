@@ -144,23 +144,23 @@ namespace Files.Commands
                             pastedSourceItems.Add(item);
                             pastedItems.Add(pasted.Result);
                         }
-                    }
-                    else if (res.ErrorCode == FilesystemErrorCode.ERROR_UNAUTHORIZED)
-                    {
-                        // Try again with CopyFileFromApp
-                        if (NativeDirectoryChangesHelper.CopyFileFromApp(item.Path, Path.Combine(destinationPath, item.Name), true))
+                        else if (pasted.ErrorCode == FilesystemErrorCode.ERROR_UNAUTHORIZED)
                         {
-                            pastedSourceItems.Add(item);
+                            // Try again with CopyFileFromApp
+                            if (NativeDirectoryChangesHelper.CopyFileFromApp(item.Path, Path.Combine(destinationPath, item.Name), true))
+                            {
+                                pastedSourceItems.Add(item);
+                            }
+                            else
+                            {
+                                Debug.WriteLine(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+                            }
                         }
-                        else
+                        else if (pasted.ErrorCode == FilesystemErrorCode.ERROR_NOTFOUND)
                         {
-                            Debug.WriteLine(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+                            // File was moved/deleted in the meantime
+                            continue;
                         }
-                    }
-                    else if (res.ErrorCode == FilesystemErrorCode.ERROR_NOTFOUND)
-                    {
-                        // File was moved/deleted in the meantime
-                        continue;
                     }
                 }
             }
@@ -179,35 +179,36 @@ namespace Files.Commands
             {
                 foreach (IStorageItem item in pastedSourceItems)
                 {
-                    try
+                    var deleted = (FilesystemResult)false;
+                    if (string.IsNullOrEmpty(item.Path))
                     {
-                        if (string.IsNullOrEmpty(item.Path))
+                        // Can't move (only copy) files from MTP devices because:
+                        // StorageItems returned in DataPackageView are read-only
+                        // The item.Path property will be empty and there's no way of retrieving a new StorageItem with R/W access
+                        continue;
+                    }
+                    if (item.IsOfType(StorageItemTypes.File))
+                    {
+                        // If we reached this we are not in an MTP device, using StorageFile.* is ok here
+                        var res = await AppInstance.FilesystemViewModel.GetFileFromPathAsync(item.Path);
+                        deleted = res;
+                        if (res)
                         {
-                            // Can't move (only copy) files from MTP devices because:
-                            // StorageItems returned in DataPackageView are read-only
-                            // The item.Path property will be empty and there's no way of retrieving a new StorageItem with R/W access
-                            continue;
-                        }
-                        if (item.IsOfType(StorageItemTypes.File))
-                        {
-                            // If we reached this we are not in an MTP device, using StorageFile.* is ok here
-                            StorageFile file = await StorageFile.GetFileFromPathAsync(item.Path);
-                            if (file != null)
-                            {
-                                await file.DeleteAsync(StorageDeleteOption.PermanentDelete).AsTask().Wrap();
-                            }
-                        }
-                        else if (item.IsOfType(StorageItemTypes.Folder))
-                        {
-                            // If we reached this we are not in an MTP device, using StorageFolder.* is ok here
-                            StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(item.Path);
-                            if (folder != null)
-                            {
-                                await folder.DeleteAsync(StorageDeleteOption.PermanentDelete).AsTask().Wrap();
-                            }
+                            deleted = await res.Result.DeleteAsync(StorageDeleteOption.PermanentDelete).AsTask().Wrap();
                         }
                     }
-                    catch (UnauthorizedAccessException)
+                    else if (item.IsOfType(StorageItemTypes.Folder))
+                    {
+                        // If we reached this we are not in an MTP device, using StorageFolder.* is ok here
+                        var res = await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(item.Path);
+                        deleted = res;
+                        if (res)
+                        {
+                            deleted = await res.Result.DeleteAsync(StorageDeleteOption.PermanentDelete).AsTask().Wrap();
+                        }
+                    }
+
+                    if (deleted == FilesystemErrorCode.ERROR_UNAUTHORIZED)
                     {
                         // Try again with DeleteFileFromApp
                         if (!NativeDirectoryChangesHelper.DeleteFileFromApp(item.Path))
@@ -215,12 +216,11 @@ namespace Files.Commands
                             Debug.WriteLine(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
                         }
                     }
-                    catch (FileNotFoundException)
+                    else if (deleted == FilesystemErrorCode.ERROR_NOTFOUND)
                     {
                         // File or Folder was moved/deleted in the meantime
                         continue;
                     }
-                    ListedItem listedItem = AppInstance.FilesystemViewModel.FilesAndFolders.FirstOrDefault(listedItem => listedItem.ItemPath.Equals(item.Path, StringComparison.OrdinalIgnoreCase));
                 }
             }
 
