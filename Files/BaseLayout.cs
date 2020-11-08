@@ -241,7 +241,7 @@ namespace Files
             ParentShellPageInstance.NavigationToolbar.CanRefresh = true;
             IsItemSelected = false;
             ParentShellPageInstance.FilesystemViewModel.IsFolderEmptyTextDisplayed = false;
-            await ParentShellPageInstance.FilesystemViewModel.SetWorkingDirectory(parameters);
+            await ParentShellPageInstance.FilesystemViewModel.SetWorkingDirectory(parameters.NavPathParam);
 
             // pathRoot will be empty on recycle bin path
             var workingDir = ParentShellPageInstance.FilesystemViewModel.WorkingDirectory;

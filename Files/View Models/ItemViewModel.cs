@@ -128,7 +128,7 @@ namespace Files.Filesystem
             return await StorageFileExtensions.DangerousGetFolderFromPathAsync(value, _workingRoot, _currentStorageFolder).Wrap();
         }
 
-        public async Task<FilesystemResult<StorageFile>> GetFileFromPathAsync(string value, IShellPage appInstance = null)
+        public async Task<FilesystemResult<StorageFile>> GetFileFromPathAsync(string value)
         {
             return await StorageFileExtensions.DangerousGetFileFromPathAsync(value, _workingRoot, _currentStorageFolder).Wrap();
         }

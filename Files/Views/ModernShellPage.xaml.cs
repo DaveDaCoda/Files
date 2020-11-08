@@ -286,7 +286,7 @@ namespace Files.Views.Pages
                     var expandedPath = StorageFileExtensions.GetPathWithoutEnvironmentVariable(sender.Text);
                     var folderPath = Path.GetDirectoryName(expandedPath) ?? expandedPath;
                     var folder = await FilesystemViewModel.GetFolderWithPathFromPathAsync(folderPath);
-                    var currPath = await folder.GetFoldersWithPathAsync(Path.GetFileName(expandedPath), (uint)maxSuggestions);
+                    var currPath = await folder.Result.GetFoldersWithPathAsync(Path.GetFileName(expandedPath), (uint)maxSuggestions);
                     if (currPath.Count() >= maxSuggestions)
                     {
                         suggestions = currPath.Select(x => new ListedItem(null) { ItemPath = x.Path, ItemName = x.Folder.Name }).ToList();
@@ -459,7 +459,7 @@ namespace Files.Views.Pages
                     if (resFolder)
                     {
                         var pathToNavigate = resFolder.Result.Path;
-                        ContentFrame.Navigate(AppSettings.GetLayoutType(), pathToNavigate); // navigate to folder
+                        ContentFrame.Navigate(AppSettings.GetLayoutType(), new NavigationArguments() { NavPathParam = pathToNavigate, AssociatedTabInstance = this }); // navigate to folder
                     }
                     else // Not a folder or inaccessible
                     {

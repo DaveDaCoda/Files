@@ -80,7 +80,7 @@ namespace Files.Interacts
             if (UserProfilePersonalizationSettings.IsSupported())
             {
                 // Get the path of the selected file
-                var sourceFile = (StorageFile)await AssociatedInstance.FilesystemViewModel.GetFileFromPathAsync(CurrentInstance.ContentPage.SelectedItem.ItemPath);
+                var sourceFile = (StorageFile)await AssociatedInstance.FilesystemViewModel.GetFileFromPathAsync(AssociatedInstance.ContentPage.SelectedItem.ItemPath);
                 if (sourceFile == null) return;
 
                 // Get the app's local folder to use as the destination folder.
@@ -334,7 +334,7 @@ namespace Files.Interacts
             var destFolder = await AssociatedInstance.FilesystemViewModel.GetFolderWithPathFromPathAsync(folderPath);
             if (destFolder)
             {
-                AssociatedInstance.ContentFrame.Navigate(AppSettings.GetLayoutType(), folderPath);
+                AssociatedInstance.ContentFrame.Navigate(AppSettings.GetLayoutType(), new NavigationArguments() { NavPathParam = folderPath, AssociatedTabInstance = AssociatedInstance });
             }
             else if (destFolder == FilesystemErrorCode.ERROR_NOTFOUND)
             {
@@ -875,7 +875,7 @@ namespace Files.Interacts
                 }
                 if (renamed)
                 {
-                    CurrentInstance.NavigationToolbar.CanGoForward = false;
+                    AssociatedInstance.NavigationToolbar.CanGoForward = false;
                     return true;
                 }
             }
@@ -971,7 +971,7 @@ namespace Files.Interacts
                 foreach (ListedItem listedItem in AssociatedInstance.ContentPage.SelectedItems)
                 {
                     // Dim opacities accordingly
-                    CurrentInstance.ContentPage.SetItemOpacity(listedItem);
+                    AssociatedInstance.ContentPage.SetItemOpacity(listedItem);
 
                     if (listedItem.PrimaryItemAttribute == StorageItemTypes.File)
                     {
@@ -1044,7 +1044,7 @@ namespace Files.Interacts
 
             if (AssociatedInstance.ContentPage.IsItemSelected)
             {
-                foreach (ListedItem listedItem in App.CurrentInstance.ContentPage.SelectedItems)
+                foreach (ListedItem listedItem in AssociatedInstance.ContentPage.SelectedItems)
                 {
                     if (listedItem.PrimaryItemAttribute == StorageItemTypes.File)
                     {

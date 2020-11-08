@@ -55,7 +55,7 @@ namespace Files.Commands
                 if (res.ErrorCode == FilesystemErrorCode.ERROR_UNAUTHORIZED)
                 {
                     bannerResult.Remove();
-                    AppInstance.StatusBarControl.OngoingTasksControl.PostBanner(
+                    AppInstance.BottomStatusStripControl.OngoingTasksControl.PostBanner(
                         "AccessDeniedDeleteDialog/Title".GetLocalized(),
                         "AccessDeniedDeleteDialog/Text".GetLocalized(),
                         0,
@@ -65,7 +65,7 @@ namespace Files.Commands
                 else if (res.ErrorCode == FilesystemErrorCode.ERROR_NOTFOUND)
                 {
                     bannerResult.Remove();
-                    AppInstance.StatusBarControl.OngoingTasksControl.PostBanner(
+                    AppInstance.BottomStatusStripControl.OngoingTasksControl.PostBanner(
                         "FileNotFoundDialog/Title".GetLocalized(),
                         "FileNotFoundDialog/Text".GetLocalized(),
                         0,
@@ -75,7 +75,7 @@ namespace Files.Commands
                 else if (res.ErrorCode == FilesystemErrorCode.ERROR_INUSE)
                 {
                     bannerResult.Remove();
-                    AppInstance.StatusBarControl.OngoingTasksControl.PostActionBanner(
+                    AppInstance.BottomStatusStripControl.OngoingTasksControl.PostActionBanner(
                         "FileInUseDeleteDialog/Title".GetLocalized(),
                         "FileInUseDeleteDialog/Text".GetLocalized(),
                         "FileInUseDeleteDialog/PrimaryButtonText".GetLocalized(),
@@ -86,7 +86,7 @@ namespace Files.Commands
             {
                 if (deleteOption == StorageDeleteOption.PermanentDelete)
                 {
-                    AppInstance.StatusBarControl.OngoingTasksControl.PostBanner(
+                    AppInstance.BottomStatusStripControl.OngoingTasksControl.PostBanner(
                     "Deletion Complete",
                     "The operation has completed.",
                     0,
@@ -95,7 +95,7 @@ namespace Files.Commands
                 }
                 else
                 {
-                    AppInstance.StatusBarControl.OngoingTasksControl.PostBanner(
+                    AppInstance.BottomStatusStripControl.OngoingTasksControl.PostBanner(
                     "Recycle Complete",
                     "The operation has completed.",
                     0,
@@ -104,7 +104,7 @@ namespace Files.Commands
                 }
             }
 
-            App.CurrentInstance.NavigationToolbar.CanGoForward = false;
+            AppInstance.NavigationToolbar.CanGoForward = false;
         }
 
         private async Task<FilesystemResult> DeleteItem(StorageDeleteOption deleteOption, IShellPage AppInstance, IProgress<uint> progress)
@@ -138,12 +138,12 @@ namespace Files.Commands
 
                 if (storItem.PrimaryItemAttribute == StorageItemTypes.File)
                 {
-                    var res = await AppInstance.FilesystemViewModel.GetFileFromPathAsync(storItem.ItemPath, AppInstance);
+                    var res = await AppInstance.FilesystemViewModel.GetFileFromPathAsync(storItem.ItemPath);
                     deleted = res ? await res.Result.DeleteAsync(deleteOption).AsTask().Wrap() : res;
                 }
                 else
                 {
-                    var res = await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(storItem.ItemPath, AppInstance);
+                    var res = await AppInstance.FilesystemViewModel.GetFolderFromPathAsync(storItem.ItemPath);
                     deleted = res ? await res.Result.DeleteAsync(deleteOption).AsTask().Wrap() : res;
                 }
 

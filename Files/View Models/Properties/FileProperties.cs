@@ -235,7 +235,7 @@ namespace Files.View_Models.Properties
                 }
             }
 
-            StorageFile file = await AssociatedInstance.FilesystemViewModel.GetFileFromPathAsync((Item as ShortcutItem)?.TargetPath ?? Item.ItemPath);
+            StorageFile file = await AppInstance.FilesystemViewModel.GetFileFromPathAsync((Item as ShortcutItem)?.TargetPath ?? Item.ItemPath);
             if (file == null)
             {
                 // Could not access file, can't show any other property
@@ -284,7 +284,7 @@ namespace Files.View_Models.Properties
 
         public async void GetSystemFileProperties()
         {
-            StorageFile file = await AssociatedInstance.FilesystemViewModel.GetFileFromPathAsync((Item as ShortcutItem)?.TargetPath ?? Item.ItemPath);
+            StorageFile file = await AppInstance.FilesystemViewModel.GetFileFromPathAsync((Item as ShortcutItem)?.TargetPath ?? Item.ItemPath);
             if (file == null)
             {
                 // Could not access file, can't show any other property
@@ -409,7 +409,7 @@ namespace Files.View_Models.Properties
 
         public async void SyncPropertyChanges()
         {
-            StorageFile file = await AssociatedInstance.FilesystemViewModel.GetFileFromPathAsync(Item.ItemPath);
+            StorageFile file = await AppInstance.FilesystemViewModel.GetFileFromPathAsync(Item.ItemPath);
             if (file != null)
             {
                 await SavePropertiesAsync(file);
@@ -436,7 +436,7 @@ namespace Files.View_Models.Properties
         /// <returns></returns>
         public async Task ClearPersonalInformation()
         {
-            StorageFile file = await AssociatedInstance.FilesystemViewModel.GetFileFromPathAsync(Item.ItemPath);
+            StorageFile file = await AppInstance.FilesystemViewModel.GetFileFromPathAsync(Item.ItemPath);
             if (file != null)
             {
                 var dict = new Dictionary<string, object>();
